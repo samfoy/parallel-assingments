@@ -13,14 +13,16 @@
 #define DEFAULT_T 100
 #define THREADS 4
 
-const char *POINTS = "Enter the number of points in each dimension, currently 100";
-const char *READ_ERROR = "Error reading input";
-const char *TIME = "Enter the number of time steps, currently 100";
-const char *NOTICE = "Scale factor = 10. Note if > 1, actual borders on two sides (right and bottom) will not display";
+const char *POINTS = "Enter the number of points in each dimension, currently 100.";
+const char *READ_ERROR = "Error reading input.";
+const char *TIME = "Enter the number of time steps, currently 100.";
+const char *NOTICE = "Scale factor = 10. Note if > 1, actual borders on two sides (right and bottom) will not display.";
 const char *FP_PRELUDE = "Begin and end of fireplace: ";
 const char *INITIAL = "Initial numbers";
 const char *FINAL = "Sequential execution numbers";
 const char *PARALLEL = "Parallel execution numbers";
+const char *COMP_ERROR = "Error:Sequential and Parallel are not equal.";
+const char *S_FACTOR = "Speed up factor:";
 
 // Used to hold a pair of integers for fireplace dimensions
 struct Int_Pair {
@@ -123,6 +125,7 @@ void parallelPropogate(double (*arr)[MAX_N][MAX_N], int dimension, int iteration
   int next = 1;
   int iter, i, j;
 
+  //TODO how do I parallelize the outer loop, can i do it if i dont collapse(3)
   for (iter = 0; iter < iterations; iter++) {
     #pragma omp parallel for shared(dimension,iterations,arr,current,next) private(i,j,iter) collapse(2)
     for (i = 1; i < dimension - 1; i++) {
@@ -131,7 +134,7 @@ void parallelPropogate(double (*arr)[MAX_N][MAX_N], int dimension, int iteration
                               + arr[current][i][j-1] + arr[current][i][j+1]);
       }
     }
-    #pragma barrier
+    // #pragma barrier
     current = next;
     next = 1 - current;
   }
@@ -191,12 +194,11 @@ long getColor(double val) {
 int main(void) {
   omp_set_num_threads(THREADS);
   int N,T;
-  int user_N, user_T;
   int current, next;
   struct Int_Pair fireplace;
   double seq[2][MAX_N][MAX_N];
   double par[2][MAX_N][MAX_N];
-  int i,j;
+  //TODO either convert back to max_n after assignmet that is higher, or dynamically allocate
   int index_of_final;
   double start, finish, sequential_time, parallel_time;
 
@@ -233,11 +235,11 @@ int main(void) {
   printArr(par, N, index_of_final, PARALLEL);
 
   if (errorCheck(N, index_of_final, seq, par)) {
-    printf("Error:Sequential and Parallel are not equal.");
+    printf("%s\n", COMP_ERROR);
     return(1);
   }
 
-  printf("Speed up factor: %f", sequential_time/parallel_time);
+  printf("%s %f", S_FACTOR, sequential_time/parallel_time);
 
   draw(seq,N,index_of_final);
 }
